@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CashZilla — Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">CZ</div>
+      <div class="titles"><h1>CashZilla</h1><small>Earn & Grow</small></div>
+    </div>
+    <nav class="nav">
+      <button id="homeBtn" class="tab-btn active">Home</button>
+      <button id="referBtn" class="tab-btn">Refer</button>
+      <button id="watchBtn" class="tab-btn">Watch</button>
+      <button id="levelsBtn" class="tab-btn">Levels</button>
+      <button id="withdrawBtn" class="tab-btn">Withdraw</button>
+      <button id="depositBtn" class="tab-btn">Deposit</button>
+      <button id="adminOpen" class="tab-btn admin">Admin</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section id="home" class="tab active">
+      <div class="grid">
+        <div class="card balance-card">
+          <h2>Total Balance</h2>
+          <div class="big">₹<span id="balance">0</span></div>
+          <div class="meta">Level <strong id="level">1</strong> • Ref Code <strong id="refCode">-</strong></div>
+          <div class="actions">
+            <button id="dailyLogin">Claim Daily (₹20)</button>
+            <button id="simulateClick">Simulate Click (₹17)</button>
+          </div>
+          <div class="earn-anim" id="earnAnim"></div>
+        </div>
+        <div class="card progress-card">
+          <h3>Progress</h3>
+          <div class="progress-wrap">
+            <div class="progress-bar"><div id="progressInner" style="width:0%"></div></div>
+            <small id="progressText">0% to Level 2</small>
+          </div>
+          <h3>Recent Activity</h3>
+          <div id="feed" class="feed"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="refer" class="tab">
+      <div class="card">
+        <h2>Refer & Earn</h2>
+        <p>Share link — <strong>₹250</strong> per signup. ₹17 per click.</p>
+        <input id="shareLink" readonly />
+        <div class="row"><button id="copyLink">Copy Link</button></div>
+        <h3>Your Referrals</h3>
+        <ul id="refList" class="ref-list"></ul>
+      </div>
+    </section>
+
+    <section id="watch" class="tab">
+      <div class="card">
+        <h2>Watch & Earn</h2>
+        <p>Watch videos to earn <strong>₹100</strong> each. Watch 10 => Level up.</p>
+        <div id="videos" class="videos"></div>
+      </div>
+    </section>
+
+    <section id="levels" class="tab">
+      <div class="card">
+        <h2>Levels</h2>
+        <ol>
+          <li><strong>Level 1:</strong> Default</li>
+          <li><strong>Level 2:</strong> Watch 10 videos, Refer 2 people, 5 link clicks</li>
+          <li><strong>Level 3:</strong> 1.5× requirements of Level 2</li>
+          <li><strong>Level 4:</strong> 2× requirements of Level 2 — required to withdraw</li>
+        </ol>
+        <div id="levelDetails"></div>
+      </div>
+    </section>
+
+    <section id="withdraw" class="tab">
+      <div class="card">
+        <h2>Withdraw</h2>
+        <p>Minimum withdrawal: <strong>₹5000</strong>. Hidden deposit requirement: <strong>₹500</strong>.</p>
+        <p>Your UPI: <strong id="upiDisplay">jaswantislive@axl</strong></p>
+        <input id="withdrawAmount" placeholder="Amount" type="number"/>
+        <select id="withdrawMethod"><option>UPI</option><option>PhonePe</option><option>Paytm</option></select>
+        <button id="requestWithdraw">Request Withdraw</button>
+        <div id="withdrawLog" class="log"></div>
+      </div>
+    </section>
+
+    <section id="deposit" class="tab">
+      <div class="card">
+        <h2>Deposit</h2>
+        <p>Deposit ₹500 to unlock withdrawals (hidden requirement).</p>
+        <input id="depositAmount" type="number" placeholder="Amount"/>
+        <select id="depositMethod"><option>UPI</option><option>PhonePe</option><option>Paytm</option></select>
+        <button id="makeDeposit">I have deposited</button>
+        <div id="depositLog" class="log"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">© <span id="year"></span> CashZilla</footer>
+
+  <script src="fake-names.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

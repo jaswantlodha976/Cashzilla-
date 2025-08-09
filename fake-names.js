@@ -1,0 +1,1 @@
+const FAKE_NAMES = ["Rahul Sharma","Priya Singh","Aman Verma","Sneha Patel","Rohit Gupta","Neha Yadav","Vikas Kumar","Anjali Reddy","Saurabh Jain","Pooja Mehta","Arjun Rao","Kavita Joshi"];

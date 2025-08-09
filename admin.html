@@ -1,0 +1,18 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin - CashZilla</title><link rel="stylesheet" href="styles.css"></head><body>
+<header class="topbar"><div class="brand"><div class="logo">CZ</div><div class="titles"><h1>Admin</h1><small>CashZilla</small></div></div></header>
+<main class="container"><div class="card"><h2>Admin Panel</h2>
+<label>Bonus (₹): <input id="setBonus" type="number" value="0"></label><button id="applyBonus">Apply Bonus</button>
+<div style="margin-top:10px"><label>Fake withdrawal name: <input id="fakeName"></label><button id="pushFake">Show Fake</button></div>
+<div style="margin-top:12px"><button id="resetUser">Reset Demo User</button></div>
+<div id="adminLog" style="margin-top:12px"></div>
+</div></main>
+<script>
+const STORAGE_KEY = "cashzilla_upgraded_v1_user";
+function getUser(){return JSON.parse(localStorage.getItem(STORAGE_KEY))||null}
+function setUser(u){localStorage.setItem(STORAGE_KEY, JSON.stringify(u))}
+document.getElementById('applyBonus').addEventListener('click', ()=>{ const amt=Number(document.getElementById('setBonus').value)||0; const u=getUser(); if(!u){alert('No user') ; return;} u.balance += amt; setUser(u); log('Applied ₹'+amt) });
+document.getElementById('pushFake').addEventListener('click', ()=>{ const n=document.getElementById('fakeName').value||'Test'; alert(n + ' withdrew ₹' + (Math.floor(Math.random()*9000)+500)); });
+document.getElementById('resetUser').addEventListener('click', ()=>{ if(confirm('Clear demo user?')){ localStorage.removeItem(STORAGE_KEY); log('Cleared'); } });
+function log(t){ const d=document.getElementById('adminLog'); d.innerHTML = new Date().toLocaleString() + ' — ' + t + '<br>' + d.innerHTML; }
+</script>
+</body></html>
