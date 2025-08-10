@@ -1,113 +1,130 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
   <meta charset="utf-8" />
+  <title>CashZilla</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>CashZilla — Dashboard</title>
-  <link rel="stylesheet" href="styles.css" />
-  <script defer src="app.js"></script>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <div class="logo">CZ</div>
-      <div class="titles"><h1>CashZilla</h1><small>Earn & Grow</small></div>
-    </div>
-    <nav class="nav">
-      <button id="homeBtn" class="tab-btn active">Home</button>
-      <button id="referBtn" class="tab-btn">Refer</button>
-      <button id="watchBtn" class="tab-btn">Watch</button>
-      <button id="levelsBtn" class="tab-btn">Levels</button>
-      <button id="withdrawBtn" class="tab-btn">Withdraw</button>
-      <button id="depositBtn" class="tab-btn">Deposit</button>
-      <button id="adminOpen" class="tab-btn admin">Admin</button>
-    </nav>
-  </header>
+  <div class="app-bg">
+    <header class="topbar">
+      <div class="logo">CashZilla</div>
+      <nav id="nav" class="nav" style="display:none;">
+        <button data-tab="home" class="nav-btn">Home</button>
+        <button data-tab="refer" class="nav-btn">Refer</button>
+        <button data-tab="watch" class="nav-btn">Watch</button>
+        <button data-tab="withdraw" class="nav-btn">Withdraw</button>
+        <button data-tab="deposit" id="depositTab" class="nav-btn" style="display:none;">Deposit</button>
+        <button id="logoutBtn" class="nav-btn">Logout</button>
+      </nav>
+    </header>
 
-  <main class="container">
-    <section id="home" class="tab active">
-      <div class="grid">
-        <div class="card balance-card">
-          <h2>Total Balance</h2>
-          <div class="big">₹<span id="balance">0</span></div>
-          <div class="meta">Level <strong id="level">1</strong> • Ref Code <strong id="refCode">-</strong></div>
-          <div class="actions">
-            <button id="dailyLogin">Claim Daily (₹20)</button>
-            <button id="simulateClick">Simulate Click (₹17)</button>
-          </div>
-          <div class="earn-anim" id="earnAnim"></div>
+    <main class="container">
+      <aside class="left-panel">
+        <div class="promo-card">
+          <h3>Earn by Watching & Referring</h3>
+          <p>Watch for rewards, invite friends and climb levels to unlock more features.</p>
         </div>
-        <div class="card progress-card">
-          <h3>Progress</h3>
-          <div class="progress-wrap">
-            <div class="progress-bar"><div id="progressInner" style="width:0%"></div></div>
-            <small id="progressText">0% to Level 2</small>
-          </div>
-          <h3>Recent Activity</h3>
-          <div id="feed" class="feed"></div>
+
+        <div class="recent-withdrawals card">
+          <h4>Recent Withdrawals</h4>
+          <div id="withdrawMarquee" class="marquee"></div>
         </div>
-      </div>
-    </section>
+      </aside>
 
-    <section id="refer" class="tab">
-      <div class="card">
-        <h2>Refer & Earn</h2>
-        <p>Share link — <strong>₹250</strong> per signup. ₹17 per click.</p>
-        <input id="shareLink" readonly />
-        <div class="row"><button id="copyLink">Copy Link</button></div>
-        <h3>Your Referrals</h3>
-        <ul id="refList" class="ref-list"></ul>
-      </div>
-    </section>
+      <section class="main-panel">
+        <section id="auth" class="card auth-card">
+          <div class="auth-left">
+            <h2>Welcome to CashZilla</h2>
+            <p>Sign in to start earning. New here? Create an account — it's free!</p>
+            <div class="socials">
+              <div class="dot" style="background:#FF6B6B"></div>
+              <div class="dot" style="background:#FFD93D"></div>
+              <div class="dot" style="background:#6BCB77"></div>
+            </div>
+          </div>
+          <div class="auth-right">
+            <h3 id="authTitle">Login</h3>
+            <input id="email" placeholder="Email" />
+            <input id="password" type="password" placeholder="Password" />
+            <div class="auth-actions">
+              <button id="loginBtn" class="btn primary">Login</button>
+              <button id="signupBtn" class="btn outline">Signup</button>
+            </div>
+            <p id="authMsg" class="muted"></p>
+          </div>
+        </section>
 
-    <section id="watch" class="tab">
-      <div class="card">
-        <h2>Watch & Earn</h2>
-        <p>Watch videos to earn <strong>₹100</strong> each. Watch 10 => Level up.</p>
-        <div id="videos" class="videos"></div>
-      </div>
-    </section>
+        <section id="home" class="tab card" style="display:none;">
+          <div class="home-top">
+            <div>
+              <h2>Dashboard</h2>
+              <p id="balance">Balance: ₹0</p>
+              <p id="level">Level: 1</p>
+            </div>
+            <div class="quick-actions">
+              <button id="dailyLoginBtn" class="btn">Claim Daily (₹20)</button>
+              <button id="watchBtn" class="btn accent">Watch & Earn</button>
+            </div>
+          </div>
 
-    <section id="levels" class="tab">
-      <div class="card">
-        <h2>Levels</h2>
-        <ol>
-          <li><strong>Level 1:</strong> Default</li>
-          <li><strong>Level 2:</strong> Watch 10 videos, Refer 2 people, 5 link clicks</li>
-          <li><strong>Level 3:</strong> 1.5× requirements of Level 2</li>
-          <li><strong>Level 4:</strong> 2× requirements of Level 2 — required to withdraw</li>
-        </ol>
-        <div id="levelDetails"></div>
-      </div>
-    </section>
+          <div class="tasks card">
+            <h3>Tasks</h3>
+            <ul>
+              <li>Daily Login - ₹20 (once/day)</li>
+              <li>Watch videos - ₹1 per 10 sec (min 2.5 min)</li>
+              <li>Refer friends - ₹250 per referral</li>
+            </ul>
+          </div>
+        </section>
 
-    <section id="withdraw" class="tab">
-      <div class="card">
-        <h2>Withdraw</h2>
-        <p>Minimum withdrawal: <strong>₹5000</strong>. Hidden deposit requirement: <strong>₹500</strong>.</p>
-        <p>Your UPI: <strong id="upiDisplay">jaswantislive@axl</strong></p>
-        <input id="withdrawAmount" placeholder="Amount" type="number"/>
-        <select id="withdrawMethod"><option>UPI</option><option>PhonePe</option><option>Paytm</option></select>
-        <button id="requestWithdraw">Request Withdraw</button>
-        <div id="withdrawLog" class="log"></div>
-      </div>
-    </section>
+        <section id="refer" class="tab card" style="display:none;">
+          <h2>Refer & Earn</h2>
+          <div class="ref-box">
+            <div>Your code: <strong id="refCode">---</strong></div>
+            <div>Link: <input id="refLink" readonly /></div>
+            <div>Referrals: <span id="refCount">0</span></div>
+          </div>
+        </section>
 
-    <section id="deposit" class="tab">
-      <div class="card">
-        <h2>Deposit</h2>
-        <p>Deposit ₹500 to unlock withdrawals (hidden requirement).</p>
-        <input id="depositAmount" type="number" placeholder="Amount"/>
-        <select id="depositMethod"><option>UPI</option><option>PhonePe</option><option>Paytm</option></select>
-        <button id="makeDeposit">I have deposited</button>
-        <div id="depositLog" class="log"></div>
-      </div>
-    </section>
-  </main>
+        <section id="watch" class="tab card" style="display:none;">
+          <h2>Watch & Earn</h2>
+          <p>Click below to open a random video in YouTube. After watching, return and claim your reward.</p>
+          <button id="openVideoBtn" class="btn accent">Open Random Video</button>
+          <p id="openStatus" class="muted"></p>
+          <button id="checkWatchBtn" class="btn" style="display:none;">Claim Watch</button>
+        </section>
 
-  <footer class="footer">© <span id="year"></span> CashZilla</footer>
+        <section id="withdraw" class="tab card" style="display:none;">
+          <h2>Withdraw</h2>
+          <form id="withdrawForm" class="form-grid">
+            <input id="bankName" placeholder="Account Holder Name" required />
+            <input id="accNo" placeholder="Account Number" required />
+            <input id="ifsc" placeholder="IFSC / UPI ID" required />
+            <input id="withdrawAmount" placeholder="Amount (₹)" required type="number" />
+            <div class="full"><button type="submit" class="btn primary">Request Withdraw</button></div>
+          </form>
+          <div id="withdrawMsg" class="muted"></div>
+          <h3>Your Requests</h3>
+          <ul id="withdrawList"></ul>
+        </section>
 
-  <script src="fake-names.js"></script>
-  <script src="app.js"></script>
+        <section id="deposit" class="tab card" style="display:none;">
+          <h2>Deposit (Level 4 only)</h2>
+          <p>Deposit ₹500 to unlock withdrawals (simulation).</p>
+          <button id="depositBtn" class="btn">Deposit ₹500 (simulate)</button>
+          <div id="depositMsg" class="muted"></div>
+        </section>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div>© CashZilla</div>
+      <div class="muted">Made for demo & testing</div>
+    </footer>
+  </div>
+
+  <script type="module" src="app.js"></script>
 </body>
 </html>

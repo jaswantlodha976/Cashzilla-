@@ -1,97 +1,325 @@
-// CashZilla upgraded - client-side demo
-const STORAGE_KEY = "cashzilla_upgraded_v1_user";
 
-const defaultUser = {
-  name: "Guest User",
-  balance: 0,
-  level: 1,
-  refCode: "CZ"+Math.floor(Math.random()*900000+100000),
-  referrals: [], clicks:0, videosWatched:0, depositVerified:false, withdraws:[]
-};
+import { firebaseConfig } from './firebase-config.js';
+let useFirebase = false;
+if(firebaseConfig) useFirebase = true;
 
-let user = JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultUser;
-localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+function $(id){return document.getElementById(id);}
 
-function $(id){return document.getElementById(id)}
-const tabs = document.querySelectorAll(".tab-btn");
-tabs.forEach(btn=>btn.addEventListener("click",()=>{
-  tabs.forEach(b=>b.classList.remove("active"));
-  btn.classList.add("active");
-  const id = btn.id.replace("Btn","").toLowerCase();
-  showTab(id);
-}));
-
-function showTab(id){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); const el = id ? document.getElementById(id) : document.getElementById('home'); el.classList.add('active'); refreshUI(); }
-
-function refreshUI(){
-  user = JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultUser;
-  $('balance').innerText = user.balance.toFixed(0);
-  $('level').innerText = user.level;
-  $('refCode').innerText = user.refCode;
-  $('shareLink').value = location.origin + location.pathname + '?ref=' + user.refCode;
-  $('refList').innerHTML = user.referrals.map(r=>`<li>${r}</li>`).join('') || '<li>No referrals yet</li>';
-  $('year').innerText = new Date().getFullYear();
-  // videos
-  const vids = [
-    {id:'f2SCN87882g',url:'https://www.youtube.com/embed/f2SCN87882g?si=7Y_C2nMMP3RqhIAy'},
-    {id:'cdtHYN8uulc',url:'https://www.youtube.com/embed/cdtHYN8uulc?si=xsqs15Qbs5xwhhg1'}
-  ];
-  $('videos').innerHTML = vids.map(v=>`<div class="video-item"><iframe src="${v.url}" allowfullscreen></iframe><div style="margin-top:8px"><button onclick="watchVideo('${v.id}')">Mark Watched (+₹100)</button></div></div>`).join('');
-  $('withdrawLog').innerHTML = user.withdraws.map(w=>`<div>₹${w.amount} — ${w.status}</div>`).join('') || 'No withdraws';
-  $('depositLog').innerText = user.depositVerified ? 'Deposit verified' : 'No deposit';
-  // progress
-  const progress = Math.min(100, Math.round((user.videosWatched/10)*100));
-  $('progressInner').style.width = progress + '%';
-  $('progressText').innerText = progress + '% to Level 2';
+// Random Indian names and amounts for fake withdrawal marquee
+const indianNames = ["Rahul Sharma","Priya Singh","Amit Kumar","Neha Patel","Vikas Yadav","Sneha Gupta","Rohit Verma","Anjali Reddy","Sanjay Mehta","Pooja Joshi","Manish Sharma","Deepa Nair","Rakesh Gupta","Kavita Rao","Arjun Desai"];
+function randomWithdrawEntry(){
+  const name = indianNames[Math.floor(Math.random()*indianNames.length)];
+  const amount = Math.floor(Math.random()*19+1)*100; // ₹100 - ₹2000 multiples
+  return {name, amount};
 }
 
-$('dailyLogin').addEventListener('click', ()=>{ user.balance += 20; pushFeed('Daily login +₹20'); saveAndRefresh(); });
-$('simulateClick').addEventListener('click', ()=>{ user.balance += 17; user.clicks += 1; pushFeed('Referral click +₹17'); saveAndRefresh(); });
+// create marquee items periodically
+function startMarquee(){
+  const box = $('withdrawMarquee');
+  if(!box) return;
+  setInterval(()=> {
+    const e = randomWithdrawEntry();
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.innerHTML = `<strong>${e.name}</strong> withdrew <b>₹${e.amount}</b> - ${new Date().toLocaleTimeString()}`;
+    box.prepend(div);
+    // keep last 10
+    while(box.children.length > 10) box.removeChild(box.lastChild);
+  }, 2500);
+}
 
-window.watchVideo = function(id){ user.balance += 100; user.videosWatched += 1; pushFeed('Watched video +₹100'); checkLevelUp(); saveAndRefresh(); };
+// Demo storage
+let currentUser = null;
+let demoStore = { users:{}, withdrawals:[], balances:{} };
 
-$('copyLink').addEventListener('click', ()=>{ $('shareLink').select(); document.execCommand('copy'); alert('Link copied'); });
+// UI helpers
+function showTab(name){
+  document.querySelectorAll('.tab').forEach(t => t.style.display='none');
+  const el = $(name);
+  if(el) el.style.display='block';
+}
+function generateRefCode(){
+  if(!currentUser) return '---';
+  return 'CZ' + (Math.floor(Math.random()*900000)+100000);
+}
 
-$('makeDeposit').addEventListener('click', ()=>{
-  const amt = Number($('depositAmount').value);
-  if(!amt || amt < 500){ alert('Deposit ₹500 minimum'); return; }
-  user.depositVerified = true; pushFeed('Deposit noted: ₹'+amt); saveAndRefresh();
+// Simple demo auth (fallback)
+async function signup(email,password){
+  if(useFirebase){
+    const userCred = await firebase.auth().createUserWithEmailAndPassword(email,password);
+    await firebase.firestore().collection('users').doc(userCred.user.uid).set({
+      email, balance:0, level:1, referrals:0, watchCount:0, lastDaily:0
+    });
+    return userCred.user;
+  } else {
+    const id = 'u_' + Date.now();
+    const u = { id, email, password, balance:0, level:1, referrals:0, watchCount:0, lastDaily:0 };
+    demoStore.users[email] = u;
+    localStorage.setItem('demoStore', JSON.stringify(demoStore));
+    return u;
+  }
+}
+
+async function login(email,password){
+  if(useFirebase){
+    const userCred = await firebase.auth().signInWithEmailAndPassword(email,password);
+    const usrDoc = await firebase.firestore().collection('users').doc(userCred.user.uid).get();
+    currentUser = { uid: userCred.user.uid, ...usrDoc.data() };
+    return currentUser;
+  } else {
+    const ds = JSON.parse(localStorage.getItem('demoStore')||'{}');
+    const u = (ds.users||{})[email];
+    if(u && u.password === password) { currentUser = u; return u; }
+    throw new Error('Invalid credentials (demo)');
+  }
+}
+
+function updateUIAfterLogin(){
+  $('auth').style.display='none';
+  $('nav').style.display='block';
+  $('logoutBtn').addEventListener('click', ()=>{ location.reload(); });
+  $('refCode').innerText = generateRefCode();
+  $('refLink').value = location.href + '?ref=' + $('refCode').innerText;
+  refreshAccount();
+}
+
+async function refreshAccount(){
+  if(useFirebase){
+    const doc = await firebase.firestore().collection('users').doc(currentUser.uid).get();
+    currentUser = { uid: currentUser.uid, ...doc.data() };
+    $('balance').innerText = 'Balance: ₹' + (currentUser.balance||0);
+    $('level').innerText = 'Level: ' + (currentUser.level||1);
+    $('refCount').innerText = currentUser.referrals||0;
+  } else {
+    const ds = JSON.parse(localStorage.getItem('demoStore')||'{}');
+    const u = ds.users[currentUser.email];
+    currentUser = u;
+    $('balance').innerText = 'Balance: ₹' + (currentUser.balance||0);
+    $('level').innerText = 'Level: ' + (currentUser.level||1);
+    $('refCount').innerText = currentUser.referrals||0;
+  }
+  if(currentUser.level >=4) $('depositTab').style.display='inline-block';
+  loadWithdrawRequests();
+}
+
+// Daily login
+$('dailyLoginBtn').addEventListener('click', async ()=>{
+  if(!currentUser){ alert('Login first'); return; }
+  const now = Date.now();
+  const last = currentUser.lastDaily || 0;
+  const lastDay = new Date(last).toDateString();
+  const today = new Date(now).toDateString();
+  if(lastDay === today){ alert('Already claimed today'); return; }
+  await addBalance(20, 'Daily Login');
+  currentUser.lastDaily = now;
+  if(useFirebase){
+    await firebase.firestore().collection('users').doc(currentUser.uid).update({ lastDaily: now });
+  } else {
+    const ds = JSON.parse(localStorage.getItem('demoStore')||'{}');
+    ds.users[currentUser.email] = currentUser;
+    localStorage.setItem('demoStore', JSON.stringify(ds));
+  }
+  refreshAccount();
+  alert('₹20 added for daily login');
 });
 
-$('requestWithdraw').addEventListener('click', ()=>{
-  const amt = Number($('withdrawAmount').value);
-  if(!amt){alert('Enter amount');return;}
-  if(amt < 5000){alert('Minimum withdrawal ₹5000'); return;}
-  if(user.balance < amt){alert('Insufficient balance');return;}
-  if(!user.depositVerified){alert('Withdrawals require ₹500 deposit first');return;}
-  user.balance -= amt; user.withdraws.push({amount:amt,status:'Pending',date:new Date().toISOString()}); pushFeed('Withdraw requested ₹'+amt); saveAndRefresh();
+// Watch & Earn
+const videos = [
+  {id:'f2SCN87882g', url:'https://youtu.be/f2SCN87882g?si=7Y_C2nMMP3RqhIAy'},
+  {id:'cdtHYN8uulc', url:'https://youtu.be/cdtHYN8uulc?si=xsqs15Qbs5xwhhg1'}
+];
+
+$('openVideoBtn')?.addEventListener('click', async ()=>{
+  if(!currentUser){ alert('Login first'); return; }
+  const v = videos[Math.floor(Math.random()*videos.length)];
+  const startTS = Date.now();
+  if(useFirebase){
+    await firebase.firestore().collection('watchStarts').add({ uid: currentUser.uid, videoId: v.id, start: startTS });
+  } else {
+    const ds = JSON.parse(localStorage.getItem('demoStore')||'{}');
+    ds.watchStart = { email: currentUser.email, videoId: v.id, start: startTS };
+    localStorage.setItem('demoStore', JSON.stringify(ds));
+  }
+  window.open(v.url, '_blank');
+  $('openStatus').innerText = 'Video opened. Watch minimum 2.5 min (150 sec). Return and click "Claim Watch".';
+  $('checkWatchBtn').style.display = 'inline-block';
 });
 
-function pushFeed(text){
-  const el = $('feed'); const p = document.createElement('div'); p.innerText = new Date().toLocaleString() + ' — ' + text; el.prepend(p);
-  // show animated earn pill
-  const anim = document.createElement('div'); anim.className='earn-pill'; anim.innerText = text; document.body.appendChild(anim);
-  setTimeout(()=>anim.classList.add('show'),50); setTimeout(()=>anim.classList.remove('show'),2200); setTimeout(()=>anim.remove(),2600);
-  if(Math.random() < 0.25){ showFakeWithdrawal() }
+$('checkWatchBtn')?.addEventListener('click', async ()=>{
+  if(!currentUser){ alert('Login first'); return; }
+  let start = null;
+  if(useFirebase){
+    const q = await firebase.firestore().collection('watchStarts').where('uid','==',currentUser.uid).orderBy('start','desc').limit(1).get();
+    if(q.empty){ alert('No watch start found'); return; }
+    start = q.docs[0].data().start;
+  } else {
+    const ds = JSON.parse(localStorage.getItem('demoStore')||'{}');
+    if(ds.watchStart && ds.watchStart.email === currentUser.email) start = ds.watchStart.start;
+  }
+  if(!start){ alert('No watch start found'); return; }
+  const now = Date.now();
+  const sec = Math.floor((now - start)/1000);
+  if(sec < 150){ alert('Not enough watch time. Watched ' + sec + ' sec. Minimum 150 sec (2.5 min) required.'); return; }
+  const earnings = Math.floor(sec / 10) * 1; // ₹1 per 10 sec
+  await addBalance(earnings, 'Watch Earn ('+sec+' sec)');
+  if(useFirebase){
+    await firebase.firestore().collection('watchStarts').add({ uid: currentUser.uid, startClaimed: now, earned: earnings });
+  } else {
+    const ds = JSON.parse(localStorage.getItem('demoStore')||'{}');
+    ds.balances = ds.balances || {};
+    ds.balances[currentUser.email] = (ds.balances[currentUser.email]||0) + earnings;
+    localStorage.setItem('demoStore', JSON.stringify(ds));
+  }
+  alert('You earned ₹' + earnings + ' for watching ' + sec + ' seconds.');
+  refreshAccount();
+});
+
+// Add balance helper
+async function addBalance(amount, reason){
+  if(useFirebase){
+    const uref = firebase.firestore().collection('users').doc(currentUser.uid);
+    await firebase.firestore().runTransaction(async tx => {
+      const doc = await tx.get(uref);
+      const prev = doc.data();
+      const newBal = (prev.balance||0) + amount;
+      tx.update(uref, { balance: newBal });
+      await firebase.firestore().collection('transactions').add({ uid: currentUser.uid, amount, reason, ts: Date.now() });
+    });
+  } else {
+    const ds = JSON.parse(localStorage.getItem('demoStore')||'{}');
+    ds.users[currentUser.email].balance = (ds.users[currentUser.email].balance||0) + amount;
+    localStorage.setItem('demoStore', JSON.stringify(ds));
+  }
 }
 
-function showFakeWithdrawal(){ const name = FAKE_NAMES[Math.floor(Math.random()*FAKE_NAMES.length)]; const amounts = [1200,5000,750,2500,9000]; const amount = amounts[Math.floor(Math.random()*amounts.length)]; // custom styled popup
-  const popup = document.createElement('div'); popup.className='fake-popup'; popup.innerHTML = `<strong>${name}</strong> withdrew ₹${amount} successfully`;
-  document.body.appendChild(popup); setTimeout(()=>popup.classList.add('show'),50); setTimeout(()=>popup.classList.remove('show'),3000); setTimeout(()=>popup.remove(),3500);
+// Withdraw flow
+$('withdrawForm')?.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  if(!currentUser){ alert('Login first'); return; }
+  const accName = $('bankName').value.trim();
+  const accNo = $('accNo').value.trim();
+  const ifsc = $('ifsc').value.trim();
+  const amount = parseFloat($('withdrawAmount').value);
+  if(!accName || !accNo || !ifsc || !amount) { alert('Enter all details'); return; }
+  if(useFirebase){
+    const doc = await firebase.firestore().collection('users').doc(currentUser.uid).get();
+    const bal = doc.data().balance || 0;
+    if(amount > bal){ alert('Insufficient balance'); return; }
+    await firebase.firestore().collection('withdrawals').add({
+      uid: currentUser.uid, email: currentUser.email, accName, accNo, ifsc, amount, status:'pending', createdAt: Date.now()
+    });
+    $('withdrawMsg').innerText = 'Withdraw request created and marked pending.';
+  } else {
+    const ds = JSON.parse(localStorage.getItem('demoStore')||'{}');
+    const u = ds.users[currentUser.email];
+    if(amount > u.balance){ alert('Insufficient balance'); return; }
+    ds.withdrawals = ds.withdrawals || [];
+    ds.withdrawals.push({ email: currentUser.email, accName, accNo, ifsc, amount, status:'pending', createdAt: Date.now() });
+    localStorage.setItem('demoStore', JSON.stringify(ds));
+    $('withdrawMsg').innerText = 'Withdraw request created (demo). Admin approval required.';
+  }
+  loadWithdrawRequests();
+});
+
+// Load withdraw requests
+function loadWithdrawRequests(){
+  const list = $('withdrawList');
+  if(!list) return;
+  list.innerHTML = '';
+  if(useFirebase){
+    firebase.firestore().collection('withdrawals').where('email','==', currentUser.email).onSnapshot(snap => {
+      list.innerHTML = '';
+      snap.forEach(doc => {
+        const d = doc.data();
+        const li = document.createElement('li');
+        li.innerText = '₹' + d.amount + ' - ' + d.status;
+        list.appendChild(li);
+      });
+    });
+  } else {
+    const ds = JSON.parse(localStorage.getItem('demoStore')||'{}');
+    (ds.withdrawals||[]).forEach(w => {
+      if(w.email === currentUser.email){
+        const li = document.createElement('li');
+        li.innerText = '₹' + w.amount + ' - ' + w.status;
+        list.appendChild(li);
+      }
+    });
+  }
 }
 
-function saveAndRefresh(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(user)); refreshUI(); }
+// Deposit (visible to level 4)
+$('depositBtn')?.addEventListener('click', async ()=>{
+  if(!currentUser){ alert('Login first'); return; }
+  if(useFirebase){
+    await firebase.firestore().collection('users').doc(currentUser.uid).update({ depositDone: true, canWithdraw:true, level:4 });
+    alert('Deposit simulated. You can now request withdraw when admin approves.');
+  } else {
+    const ds = JSON.parse(localStorage.getItem('demoStore')||'{}');
+    ds.users[currentUser.email].depositDone = true;
+    ds.users[currentUser.email].canWithdraw = true;
+    ds.users[currentUser.email].level = 4;
+    localStorage.setItem('demoStore', JSON.stringify(ds));
+    alert('Deposit simulated (demo).');
+    refreshAccount();
+  }
+});
 
-function checkLevelUp(){
-  const lv2 = (user.videosWatched >= 10 && user.referrals.length >= 2 && user.clicks >= 5);
-  const lv3 = (user.videosWatched >= Math.ceil(10*1.5) && user.referrals.length >= Math.ceil(2*1.5) && user.clicks >= Math.ceil(5*1.5));
-  const lv4 = (user.videosWatched >= 20 && user.referrals.length >= 4 && user.clicks >= 10);
-  if(lv4) user.level = 4; else if(lv3) user.level = 3; else if(lv2) user.level = 2;
-}
+// Signup/Login handlers
+$('loginBtn').addEventListener('click', async ()=>{
+  try{
+    const u = await login($('email').value.trim(), $('password').value);
+    updateUIAfterLogin();
+    showTab('home');
+  }catch(err){ $('authMsg').innerText = err.message; }
+});
+$('signupBtn').addEventListener('click', async ()=>{
+  try{
+    const u = await signup($('email').value.trim(), $('password').value);
+    $('authMsg').innerText = 'Signup success. Now login.';
+  }catch(err){ $('authMsg').innerText = err.message; }
+});
 
+// Nav
+document.addEventListener('click', (e)=>{
+  if(e.target.dataset && e.target.dataset.tab){
+    const tab = e.target.dataset.tab;
+    document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+    e.target.classList.add('active');
+    showTab(tab);
+  }
+});
+
+// Init
 window.addEventListener('load', ()=>{
-  const params = new URLSearchParams(location.search); const ref = params.get('ref');
-  if(ref && ref !== user.refCode){ user.balance += 250; user.referrals.push(ref); pushFeed('Referred by ' + ref + ' +₹250'); saveAndRefresh(); }
-  refreshUI();
-  document.getElementById('adminOpen').addEventListener('click', ()=>{ const pw = prompt('Enter admin password'); if(pw==='CashZilla@123'){ location.href='admin.html' } else alert('Wrong password') });
+  startMarquee();
+  if(useFirebase){
+    const check = setInterval(()=> {
+      if(window.firebase && firebase.apps !== undefined){
+        clearInterval(check);
+        firebase.initializeApp(firebaseConfig);
+        firebase.auth().onAuthStateChanged(async (u)=>{
+          if(u){
+            const doc = await firebase.firestore().collection('users').doc(u.uid).get();
+            currentUser = { uid:u.uid, ...doc.data() };
+            updateUIAfterLogin();
+            showTab('home');
+          }
+        });
+      }
+    },200);
+  } else {
+    const params = new URLSearchParams(location.search);
+    const ref = params.get('ref');
+    if(ref){
+      const ds = JSON.parse(localStorage.getItem('demoStore')||'{}');
+      ds.lastRef = ref;
+      localStorage.setItem('demoStore', JSON.stringify(ds));
+    }
+    // Load demo store if exists
+    const ds = JSON.parse(localStorage.getItem('demoStore')||'{}');
+    demoStore = ds || demoStore;
+  }
+  // refresh withdraw list periodically
+  setInterval(()=>{ if(currentUser) loadWithdrawRequests(); },3000);
 });

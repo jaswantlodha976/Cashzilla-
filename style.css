@@ -1,0 +1,46 @@
+
+:root{
+  --bg1: linear-gradient(135deg,#f6d365 0%, #fda085 100%);
+  --card:#ffffff;
+  --muted:#666;
+  --accent:#6C63FF;
+  --accent2:#FF6B6B;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg1);min-height:100vh;color:#222;}
+.app-bg{display:flex;flex-direction:column;min-height:100vh;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;}
+.logo{font-weight:800;font-size:20px;color:#fff;letter-spacing:1px;}
+.container{display:flex;flex:1;gap:20px;padding:20px;max-width:1200px;margin:0 auto;}
+.left-panel{width:320px;display:flex;flex-direction:column;gap:16px;}
+.main-panel{flex:1;}
+.card{background:var(--card);border-radius:14px;padding:16px;box-shadow:0 6px 18px rgba(11,11,11,0.08);}
+.promo-card{background:linear-gradient(135deg,#6C63FF,#9B5DE5);color:#fff;padding:20px;border-radius:12px;}
+.recent-withdrawals h4{margin:0 0 8px 0;}
+.marquee{height:140px;overflow:hidden;position:relative;background:linear-gradient(180deg,rgba(255,255,255,0.9),rgba(255,255,255,0.6));border-radius:10px;padding:8px;}
+.marquee .item{padding:8px;border-bottom:1px dashed #eee;}
+.auth-card{display:flex;gap:8px;overflow:hidden;}
+.auth-left{flex:1;padding:18px;background:linear-gradient(180deg,#FFD93D,#FF6B6B);color:#fff;}
+.auth-right{flex:1;padding:18px;}
+.auth-right input{display:block;width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #eee;}
+.auth-actions{display:flex;gap:8px;}
+.btn{padding:10px 14px;border-radius:10px;border:none;cursor:pointer;background:#eee;}
+.btn.primary{background:linear-gradient(90deg,var(--accent),#9B5DE5);color:#fff;}
+.btn.accent{background:linear-gradient(90deg,#00B4D8,#0077b6);color:#fff;}
+.btn.outline{background:transparent;border:1px solid #ddd;}
+.muted{color:var(--muted);font-size:14px;}
+.home-top{display:flex;justify-content:space-between;align-items:center;}
+.tasks ul{margin:0;padding-left:18px;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.form-grid .full{grid-column:1 / -1;}
+.nav{display:flex;gap:6px;}
+.nav-btn{background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;padding:8px 10px;border-radius:8px;}
+.left-panel .card{padding:12px;}
+.footer{padding:14px;text-align:center;color:#fff;background:transparent;}
+input[readonly]{background:#f3f3f3;}
+@media(max-width:900px){
+  .container{flex-direction:column;padding:12px;}
+  .left-panel{width:100%;}
+  .form-grid{grid-template-columns:1fr;}
+  .nav{display:none;}
+}
